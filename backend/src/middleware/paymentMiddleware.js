@@ -1,7 +1,7 @@
 const { db } = require('../config/db');
 const jwt = require('jsonwebtoken');
 
-const requirePaymentPerSession = (req, res, next) => {
+const requirePaymentPerSession = async (req, res, next) => {
   if (process.env.PAYMENT_ENABLED !== 'true') {
     return next();
   }
@@ -20,24 +20,21 @@ const requirePaymentPerSession = (req, res, next) => {
   const userId = decoded.id;
   const sessionId = decoded.sid;
 
-  db.get(`SELECT role FROM users WHERE id = ?`, [userId], (err, user) => {
-    if (err) return res.status(500).json({ message: 'Server error' });
+  try {
+    const userResult = await db.query(`SELECT role FROM users WHERE id = $1`, [userId]);
+    const user = userResult.rows[0];
     if (!user) return res.status(404).json({ message: 'No user found' });
     if (user.role === 'admin') {
       return next();
     }
-    db.get(
-      `SELECT id FROM payments WHERE user_id = ? AND login_session_id = ? AND status = 'success' ORDER BY id DESC LIMIT 1`,
-      [userId, sessionId],
-      (e2, payment) => {
-        if (e2) return res.status(500).json({ message: 'Server error' });
-        if (!payment) {
-          return res.status(402).json({ message: 'Payment required', requiresPayment: true });
-        }
-        next();
-      }
-    );
-  });
+    const paymentResult = await db.query(`SELECT id FROM payments WHERE user_id = $1 AND login_session_id = $2 AND status = 'success' ORDER BY id DESC LIMIT 1`, [userId, sessionId]);
+    if (paymentResult.rows.length === 0) {
+      return res.status(402).json({ message: 'Payment required', requiresPayment: true });
+    }
+    next();
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error checking payment status' });
+  }
 };
 
 module.exports = requirePaymentPerSession;
