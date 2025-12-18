@@ -15,25 +15,20 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/prediction', predictionRoutes);
-app.use('/api/payment', paymentRoutes);
-
-// Root Route
-// app.get('/', (req, res) => {
-//   res.send('Richcotech Lottery API is running');
-// });
-
-// Serve frontend in production
+// ✅ Serve frontend FIRST in production
 if (process.env.NODE_ENV === 'production') {
   const path = require('path');
   const distPath = path.resolve(__dirname, '../frontend/dist');
-  app.use(express.static(distPath, { maxAge: '1d' }));
+  app.use(express.static(distPath));
   app.use((req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
+
+// API Routes AFTER
+app.use('/api/auth', authRoutes);
+app.use('/api/prediction', predictionRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Initialize DB and Start Server
 initDb().then(() => {
