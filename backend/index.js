@@ -21,9 +21,9 @@ app.use('/api/prediction', predictionRoutes);
 app.use('/api/payment', paymentRoutes);
 
 // Root Route
-app.get('/', (req, res) => {
-  res.send('Richcotech Lottery API is running');
-});
+// app.get('/', (req, res) => {
+//   res.send('Richcotech Lottery API is running');
+// });
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
