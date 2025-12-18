@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    @apply text-gray-900 font-sans;
+    background-image: radial-gradient(1000px circle at 0% 0%, rgba(245,158,11,0.08) 0%, transparent 60%), radial-gradient(800px circle at 100% 0%, rgba(14,165,233,0.06) 0%, transparent 60%);
+    background-color: #0F172A;
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg bg-rich-gold text-rich-dark font-semibold hover:bg-amber-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-300;
+  }
+  .input {
+    @apply mt-1 w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-300 bg-white;
+  }
+  .section-title {
+    @apply text-3xl font-bold text-white;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+.animate-fade-in {
+  animation: fadeIn 400ms ease-out both;
+}
