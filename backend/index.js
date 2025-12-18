@@ -15,20 +15,21 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// ✅ Serve frontend FIRST in production
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/prediction', predictionRoutes);
+app.use('/api/payment', paymentRoutes);
+
+// Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
   const path = require('path');
   const distPath = path.resolve(__dirname, '../frontend/dist');
   app.use(express.static(distPath));
-  app.use((req, res) => {
+  // Catch-all to serve index.html for any non-API GET requests
+  app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
-
-// API Routes AFTER
-app.use('/api/auth', authRoutes);
-app.use('/api/prediction', predictionRoutes);
-app.use('/api/payment', paymentRoutes);
 
 // Initialize DB and Start Server
 initDb().then(() => {
