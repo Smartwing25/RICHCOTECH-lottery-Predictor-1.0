@@ -14,11 +14,14 @@ exports.initiate = async (req, res) => {
   if (process.env.PAYMENT_ENABLED !== 'true') {
     return res.status(200).json({ status: 'disabled', message: 'Payment disabled' });
   }
-  const token = req.headers['authorization'];
-  const tokenParts = token.split(' ');
-  const decoded = jwt.verify(tokenParts[1], process.env.JWT_SECRET);
-  const userId = decoded.id;
-  const sessionId = decoded.sid;
+  // The verifyToken middleware has already run and attached these properties
+  const { userId, sid: sessionId } = req;
+
+  // Defensive check to ensure middleware worked as expected
+  if (!userId || !sessionId) {
+    console.error('Authentication details missing from request in payment initiation.');
+    return res.status(401).json({ message: 'Authentication details missing.' });
+  }
 
   const { phone, channel = 'vodafone' } = req.body;
   const amount = 5;
@@ -116,11 +119,14 @@ exports.statusForSession = async (req, res) => {
   if (process.env.PAYMENT_ENABLED !== 'true') {
     return res.status(200).json({ status: 'disabled' });
   }
-  const token = req.headers['authorization'];
-  const tokenParts = token.split(' ');
-  const decoded = jwt.verify(tokenParts[1], process.env.JWT_SECRET);
-  const userId = decoded.id;
-  const sessionId = decoded.sid;
+  // The verifyToken middleware has already run and attached these properties
+  const { userId, sid: sessionId } = req;
+
+  // Defensive check
+  if (!userId || !sessionId) {
+    console.error('Authentication details missing from request in payment status check.');
+    return res.status(401).json({ message: 'Authentication details missing.' });
+  }
 
   try {
     const result = await db.query(
