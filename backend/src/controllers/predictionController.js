@@ -5,7 +5,7 @@ const getRandomInt = (min, max) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
-exports.predict = async (req, res) => {
+exports.predict = (req, res) => {
   const { history, type } = req.body; // history: "1,2,3; 4,5,6", type: "5/90"
   const userId = req.userId;
 
@@ -31,28 +31,30 @@ exports.predict = async (req, res) => {
   
   const predictedNumbers = suggestions.sort((a, b) => a - b).join(', ');
 
-  try {
-    await db.query(
-      `INSERT INTO predictions (user_id, lottery_type, input_numbers, predicted_numbers) VALUES ($1, $2, $3, $4)`,
-      [userId, type, JSON.stringify(history), predictedNumbers]
-    );
-    res.status(200).json({
-      prediction: predictedNumbers,
-      confidence: 'High', // Mock confidence
-      analysis: 'Based on frequency analysis of provided history.'
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Error saving prediction' });
-  }
+  // Save to DB
+  db.run(`INSERT INTO predictions (user_id, lottery_type, input_numbers, predicted_numbers) VALUES (?, ?, ?, ?)`,
+    [userId, type, JSON.stringify(history), predictedNumbers],
+    function(err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Error saving prediction' });
+      }
+      
+      res.status(200).json({
+        prediction: predictedNumbers,
+        confidence: 'High', // Mock confidence
+        analysis: 'Based on frequency analysis of provided history.'
+      });
+    }
+  );
 };
 
-exports.getHistory = async (req, res) => {
+exports.getHistory = (req, res) => {
   const userId = req.userId;
-  try {
-    const result = await db.query(`SELECT * FROM predictions WHERE user_id = $1 ORDER BY created_at DESC`, [userId]);
-    res.status(200).json(result.rows);
-  } catch (err) {
-    return res.status(500).json({ message: 'Error fetching history' });
-  }
+    db.all(`SELECT * FROM predictions WHERE user_id = ? ORDER BY created_at DESC`, [userId], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ message: 'Error fetching history' });
+        }
+        res.status(200).json(rows);
+    });
 };

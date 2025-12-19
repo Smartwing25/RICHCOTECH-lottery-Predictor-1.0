@@ -1,63 +1,73 @@
-const { Pool } = require('pg');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+const dbPath = path.resolve(__dirname, '../../lottery.db');
+
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database ' + dbPath + ': ' + err.message);
+  } else {
+    console.log('Connected to the SQLite database.');
+  }
 });
-
-const db = {
-  query: (text, params) => pool.query(text, params),
-};
 
 const initDb = () => {
   return new Promise((resolve, reject) => {
-    const createTablesQuery = `
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
+    db.serialize(() => {
+      // Users Table
+      db.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         role TEXT DEFAULT 'user',
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS payments (
-        id SERIAL PRIMARY KEY,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`, (err) => {
+        if (err) {
+            console.error("Error creating users table", err);
+            reject(err);
+        }
+      });
+
+      // Attempt to add role column if it doesn't exist (for existing DBs)
+      db.run(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`, (err) => {
+        // Ignore error if column already exists
+      });
+
+      // Payments Table
+      db.run(`CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        amount NUMERIC NOT NULL,
+        amount REAL NOT NULL,
         status TEXT NOT NULL,
         transaction_id TEXT,
         login_session_id TEXT NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
-      );
-      CREATE TABLE IF NOT EXISTS predictions (
-        id SERIAL PRIMARY KEY,
+      )`, (err) => {
+        if (err) {
+            console.error("Error creating payments table", err);
+            reject(err);
+        }
+      });
+
+      // Predictions History Table
+      db.run(`CREATE TABLE IF NOT EXISTS predictions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         lottery_type TEXT,
         input_numbers TEXT,
         predicted_numbers TEXT,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
-      );
-    `;
-    db.query(createTablesQuery)
-      .then(() => {
-        console.log('Database tables are ready.');
-        const adminEmail = process.env.ADMIN_EMAIL;
-        if (adminEmail) {
-          return db.query(`UPDATE users SET role = 'admin' WHERE email = $1`, [adminEmail]);
+      )`, (err) => {
+        if (err) {
+            console.error("Error creating predictions table", err);
+            reject(err);
         }
-        return Promise.resolve();
-      })
-      .then(() => {
-        if (process.env.ADMIN_EMAIL) {
-          console.log('Admin role checked/set.');
-        }
-        resolve();
-      })
-      .catch(err => {
-        console.error("Error initializing database tables", err);
-        reject(err);
       });
+
+      resolve();
+    });
   });
 };
 
